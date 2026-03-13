@@ -56,12 +56,13 @@ export default function AppLayout() {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", minHeight: "100vh" }}>
       <aside style={{ padding: 16, background: "#111827", color: "#fff" }}>
-        <h2 style={{ marginBottom: 10 }}>Cobranza</h2>
-
-        <div style={{ fontSize: 13, opacity: 0.9, marginBottom: 12 }}>
-          <div><b>{user?.nombre}</b></div>
-          <div>{user?.email}</div>
-          <div style={{ marginTop: 6, opacity: 0.8 }}>Rol: {user?.roles?.join(", ")}</div>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+          <img src="/logo.png" alt="Cobranza Logo" style={{ width: '100%', maxWidth: '80px', marginRight: 10 }} />
+          <div style={{ fontSize: 13, opacity: 0.9 }}>
+            <div><b>{user?.nombre}</b></div>
+            <div>{user?.email}</div>
+            <div style={{ marginTop: 6, opacity: 0.8 }}>Rol: {user?.roles?.join(", ")}</div>
+          </div>
         </div>
 
         <nav style={{ display: "grid", gap: 8 }}>

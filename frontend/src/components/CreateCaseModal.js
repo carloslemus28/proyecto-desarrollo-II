@@ -618,7 +618,7 @@ const modal = {
   maxWidth: "100%",
   background: "#fff",
   borderRadius: 14,
-  overflow: "hidden",
+  overflow: "visible",
   boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
   border: "1px solid #e5e7eb",
   willChange: "transform, opacity",

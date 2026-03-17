@@ -530,7 +530,7 @@ async function confirmDeleteActivity() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           {/* Actividades */}
           <div ref={activitiesCardRef} style={{ background: "#fff", borderRadius: 12, padding: 14 }}>
-            <h3>Seguimiento / Actividades</h3>
+            <h3>Actividades</h3>
 
             <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
               <select value={tipo} onChange={(e) => setTipo(e.target.value)} style={{ padding: 8, borderRadius: 8 }}>

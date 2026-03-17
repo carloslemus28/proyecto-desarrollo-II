@@ -42,6 +42,7 @@ export default function CreateUserModal({ open, onClose, onCreated, showToast })
     password: "",
     rol: "AGENTE",
   });
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (open) setMounted(true);
@@ -52,6 +53,7 @@ export default function CreateUserModal({ open, onClose, onCreated, showToast })
     if (!open) return;
     setSaving(false);
     setForm({ nombre: "", email: "", telefono: "", password: "", rol: "AGENTE" });
+    setShowPassword(false);
   }, [open]);
 
   // animación entrada/salida
@@ -266,14 +268,50 @@ export default function CreateUserModal({ open, onClose, onCreated, showToast })
                 disabled={saving}
               />
             </div>
-            <input
-              data-anim="field"
-              placeholder="Contraseña"
-              type="password"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              style={input}
-            />
+            <div data-anim="field" style={{ position: "relative", width: "100%" }}>
+              <input
+                placeholder="Contraseña"
+                type={showPassword ? "text" : "password"}
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                style={{ ...input, paddingRight: 40 }}
+              />
+              <span
+                role="button"
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                tabIndex={0}
+                onClick={() => setShowPassword((s) => !s)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    setShowPassword((s) => !s);
+                  }
+                }}
+                style={{
+                  position: "absolute",
+                  right: 10,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  cursor: saving ? "not-allowed" : "pointer",
+                  color: "#666",
+                  width: 20,
+                  height: 20,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {showPassword ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width={20} height={20}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 3l18 18M12 8a4 4 0 014 4m0 0a4 4 0 01-4 4m0-8a4 4 0 00-4 4m0 0a4 4 0 004 4m6 2a9 9 0 01-6 2.5M6 6a9 9 0 016-2.5" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width={20} height={20}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                )}
+              </span>
+            </div>
 
             <select
               data-anim="field"

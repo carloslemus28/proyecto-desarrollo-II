@@ -19,7 +19,8 @@
 import { useEffect, useRef, useState } from "react";
 import api from "../api/axios";
 import { animate, remove, stagger } from "animejs";
-
+import PhoneInput from "../components/PhoneInput";
+import { formatFullPhone } from "../constants/phoneCountries";
 export default function EditUserModal({ open, onClose, userTarget, onSaved, showToast }) {
   const [mounted, setMounted] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -36,7 +37,9 @@ export default function EditUserModal({ open, onClose, userTarget, onSaved, show
 
   const [edit, setEdit] = useState({
     nombre: "",
-    telefono: "",
+    telefonoPais: "SV",
+    telefonoPrefijo: "+503",
+    telefonoNumero: "",
   });
 
   const [changePass, setChangePass] = useState(false);
@@ -56,7 +59,9 @@ export default function EditUserModal({ open, onClose, userTarget, onSaved, show
     setSaving(false);
     setEdit({
       nombre: userTarget?.Nombre || "",
-      telefono: userTarget?.Telefono || "",
+      telefonoPais: userTarget?.TelefonoPais || "SV",
+      telefonoPrefijo: userTarget?.TelefonoPrefijo || "+503",
+      telefonoNumero: userTarget?.TelefonoNumero || "",
     });
 
     // reset password section
@@ -235,7 +240,10 @@ export default function EditUserModal({ open, onClose, userTarget, onSaved, show
       // 1) actualizar datos del usuario
       await api.put(`/users/${userTarget.UsuarioId}`, {
         nombre: edit.nombre.trim(),
-        telefono: edit.telefono.trim() || null,
+        telefono: formatFullPhone(edit.telefonoPrefijo, edit.telefonoNumero),
+        telefonoPais: edit.telefonoPais,
+        telefonoPrefijo: edit.telefonoPrefijo,
+        telefonoNumero: edit.telefonoNumero || null,
       });
 
       // 2) opcional: cambiar contraseña
@@ -308,10 +316,21 @@ export default function EditUserModal({ open, onClose, userTarget, onSaved, show
 
             <div data-anim="field" style={{ display: "grid", gap: 6 }}>
               <div style={{ fontSize: 12, opacity: 0.8 }}>Teléfono</div>
-              <input
-                value={edit.telefono}
-                onChange={(e) => setEdit({ ...edit, telefono: e.target.value })}
-                style={input}
+              <PhoneInput
+                value={{
+                  telefonoPais: edit.telefonoPais,
+                  telefonoPrefijo: edit.telefonoPrefijo,
+                  telefonoNumero: edit.telefonoNumero,
+                }}
+                onChange={(phone) =>
+                  setEdit({
+                    ...edit,
+                    telefonoPais: phone.telefonoPais,
+                    telefonoPrefijo: phone.telefonoPrefijo,
+                    telefonoNumero: phone.telefonoNumero,
+                  })
+                }
+                disabled={saving}
               />
             </div>
 

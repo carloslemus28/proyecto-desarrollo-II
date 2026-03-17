@@ -18,7 +18,8 @@
 import { useEffect, useRef, useState } from "react";
 import api from "../api/axios";
 import { animate, remove, stagger } from "animejs";
-
+import PhoneInput from "../components/PhoneInput";
+import { formatFullPhone } from "../constants/phoneCountries";
 export default function CreateUserModal({ open, onClose, onCreated, showToast }) {
   const [mounted, setMounted] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -35,7 +36,9 @@ export default function CreateUserModal({ open, onClose, onCreated, showToast })
   const [form, setForm] = useState({
     nombre: "",
     email: "",
-    telefono: "",
+    telefonoPais: "SV",
+    telefonoPrefijo: "+503",
+    telefonoNumero: "",
     password: "",
     rol: "AGENTE",
   });
@@ -178,7 +181,10 @@ export default function CreateUserModal({ open, onClose, onCreated, showToast })
       await api.post("/users", {
         nombre: form.nombre.trim(),
         email: form.email.trim(),
-        telefono: form.telefono.trim() || null,
+        telefono: formatFullPhone(form.telefonoPrefijo, form.telefonoNumero),
+        telefonoPais: form.telefonoPais,
+        telefonoPrefijo: form.telefonoPrefijo,
+        telefonoNumero: form.telefonoNumero || null,
         password: form.password,
         rol: form.rol,
       });
@@ -242,13 +248,24 @@ export default function CreateUserModal({ open, onClose, onCreated, showToast })
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               style={input}
             />
-            <input
-              data-anim="field"
-              placeholder="Teléfono"
-              value={form.telefono}
-              onChange={(e) => setForm({ ...form, telefono: e.target.value })}
-              style={input}
-            />
+            <div data-anim="field" style={{ gridColumn: "1 / -1" }}>
+              <PhoneInput
+                value={{
+                  telefonoPais: form.telefonoPais,
+                  telefonoPrefijo: form.telefonoPrefijo,
+                  telefonoNumero: form.telefonoNumero,
+                }}
+                onChange={(phone) =>
+                  setForm({
+                    ...form,
+                    telefonoPais: phone.telefonoPais,
+                    telefonoPrefijo: phone.telefonoPrefijo,
+                    telefonoNumero: phone.telefonoNumero,
+                  })
+                }
+                disabled={saving}
+              />
+            </div>
             <input
               data-anim="field"
               placeholder="Contraseña"

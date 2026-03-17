@@ -21,7 +21,8 @@ import api from "../api/axios";
 import { updateCase, updateDebtor } from "../services/cases.service";
 import { animate, remove, stagger } from "animejs";
 import CaseMap from "../components/CaseMap";
-
+import PhoneInput from "../components/PhoneInput";
+import { formatFullPhone } from "../constants/phoneCountries";
 async function geocodeAddress(q) {
   const url =
     "https://nominatim.openstreetmap.org/search" +
@@ -70,7 +71,9 @@ export default function EditCaseModal({ open, onClose, caseData, caseId, onSaved
     monto: "",
     descripcion: "",
     asignadoAUsuarioId: "",
-    telefono: "",
+    telefonoPais: "",
+    telefonoPrefijo: "",
+    telefonoNumero: "",
     direccion: "",
     lat: "",
     lng: "",
@@ -95,7 +98,9 @@ export default function EditCaseModal({ open, onClose, caseData, caseId, onSaved
         monto: caseData.Monto ?? "",
         descripcion: caseData.Descripcion ?? "",
         asignadoAUsuarioId: caseData.AsignadoAUsuarioId ?? "",
-        telefono: caseData.Telefono ?? "",
+        telefonoPais: caseData.TelefonoPais ?? "SV",
+        telefonoPrefijo: caseData.TelefonoPrefijo ?? "+503",
+        telefonoNumero: caseData.TelefonoNumero ?? "",
         direccion: caseData.Direccion ?? "",
         lat: caseData.Lat ?? "",
         lng: caseData.Lng ?? "",
@@ -277,7 +282,10 @@ export default function EditCaseModal({ open, onClose, caseData, caseId, onSaved
       });
 
       await updateDebtor(caseId, {
-        telefono: edit.telefono,
+        telefono: formatFullPhone(edit.telefonoPrefijo, edit.telefonoNumero),
+        telefonoPais: edit.telefonoPais,
+        telefonoPrefijo: edit.telefonoPrefijo,
+        telefonoNumero: edit.telefonoNumero || null,
         direccion: edit.direccion,
         lat: edit.lat === "" ? null : Number(edit.lat),
         lng: edit.lng === "" ? null : Number(edit.lng),
@@ -377,15 +385,26 @@ export default function EditCaseModal({ open, onClose, caseData, caseId, onSaved
             </Section>
 
             <Section title="Deudor">
-              <Field label="Teléfono">
-                <input
-                  data-anim="field"
-                  value={edit.telefono}
-                  onChange={(e) => setEdit({ ...edit, telefono: e.target.value })}
-                  style={input}
+            <Field label="Teléfono">
+              <div data-anim="field">
+                <PhoneInput
+                  value={{
+                    telefonoPais: edit.telefonoPais,
+                    telefonoPrefijo: edit.telefonoPrefijo,
+                    telefonoNumero: edit.telefonoNumero,
+                  }}
+                  onChange={(phone) =>
+                    setEdit({
+                      ...edit,
+                      telefonoPais: phone.telefonoPais,
+                      telefonoPrefijo: phone.telefonoPrefijo,
+                      telefonoNumero: phone.telefonoNumero,
+                    })
+                  }
+                  disabled={saving}
                 />
-              </Field>
-
+              </div>
+            </Field>
               {/*Dirección + botón de geocodificación */}
               <Field label="Dirección">
                 <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10 }}>

@@ -20,6 +20,8 @@ import api from "../api/axios";
 import { createCase } from "../services/cases.service";
 import { animate, remove, stagger } from "animejs";
 import CaseMap from "../components/CaseMap";
+import PhoneInput from "../components/PhoneInput";
+import {formatFullPhone} from "../constants/phoneCountries";
 
 async function geocodeAddress(q) {
   // Usamos Nominatim de OpenStreetMap para geocodificar la dirección
@@ -57,7 +59,9 @@ export default function CreateCaseModal({ open, onClose, onCreated }) {
   const [form, setForm] = useState({
     nombres: "",
     apellidos: "",
-    telefono: "",
+    telefonoPais: "",
+    telefonoPrefijo: "",
+    telefonoNumero: "",
     direccion: "",
     lat: "",
     lng: "",
@@ -65,6 +69,11 @@ export default function CreateCaseModal({ open, onClose, onCreated }) {
     descripcion: "",
     estadoCodigo: "NUEVO",
     asignadoAUsuarioId: "",
+  });
+
+  const [touched, setTouched] = useState({
+    nombres: false,
+    apellidos: false,
   });
 
   const canSave = useMemo(() => {
@@ -82,6 +91,7 @@ export default function CreateCaseModal({ open, onClose, onCreated }) {
     setSaving(false);
     setGeoLoading(false);
     setGeoMsg("");
+    setTouched({ nombres: false, apellidos: false });
 
     (async () => {
       try {
@@ -202,6 +212,15 @@ export default function CreateCaseModal({ open, onClose, onCreated }) {
     onClose?.();
   }
 
+  function getFieldStyle(fieldName) {
+    const isInvalid = touched[fieldName] && !form[fieldName].trim();
+    return {
+      ...inputStyle,
+      border: isInvalid ? "1px solid #dc2626" : inputStyle.border,
+      boxShadow: isInvalid ? "0 0 0 2px rgba(220,38,38,0.18)" : "none",
+    };
+  }
+
   async function geocodeNow() {
     if (saving) return;
 
@@ -243,6 +262,10 @@ export default function CreateCaseModal({ open, onClose, onCreated }) {
     setError("");
 
     if (!form.nombres.trim() || !form.apellidos.trim()) {
+      setTouched({
+        nombres: true,
+        apellidos: true,
+      });
       setError("Nombres y apellidos son requeridos.");
       return;
     }
@@ -256,7 +279,10 @@ export default function CreateCaseModal({ open, onClose, onCreated }) {
         deudor: {
           nombres: form.nombres.trim(),
           apellidos: form.apellidos.trim(),
-          telefono: form.telefono.trim() || null,
+          telefono: formatFullPhone(form.telefonoPrefijo, form.telefonoNumero),
+          telefonoPais: form.telefonoPais,
+          telefonoPrefijo: form.telefonoPrefijo,
+          telefonoNumero: form.telefonoNumero || null,
           direccion: form.direccion.trim() || null,
           lat: form.lat === "" ? null : Number(form.lat),
           lng: form.lng === "" ? null : Number(form.lng),
@@ -280,6 +306,11 @@ export default function CreateCaseModal({ open, onClose, onCreated }) {
         descripcion: "",
         estadoCodigo: "NUEVO",
         asignadoAUsuarioId: "",
+      });
+
+      setTouched({
+        nombres: false,
+        apellidos: false,
       });
 
       setGeoMsg("");
@@ -342,8 +373,9 @@ export default function CreateCaseModal({ open, onClose, onCreated }) {
                   data-anim="field"
                   value={form.nombres}
                   onChange={(e) => setForm({ ...form, nombres: e.target.value })}
+                  onBlur={() => setTouched((prev) => ({ ...prev, nombres: true }))}
                   placeholder="Ej: Juan"
-                  style={inputStyle}
+                  style={getFieldStyle("nombres")}
                 />
               </Field>
 
@@ -352,19 +384,31 @@ export default function CreateCaseModal({ open, onClose, onCreated }) {
                   data-anim="field"
                   value={form.apellidos}
                   onChange={(e) => setForm({ ...form, apellidos: e.target.value })}
+                  onBlur={() => setTouched((prev) => ({ ...prev, apellidos: true }))}
                   placeholder="Ej: Pérez"
-                  style={inputStyle}
+                  style={getFieldStyle("apellidos")}
                 />
               </Field>
 
               <Field label="Teléfono">
-                <input
-                  data-anim="field"
-                  value={form.telefono}
-                  onChange={(e) => setForm({ ...form, telefono: e.target.value })}
-                  placeholder="Ej: 7890-1234"
-                  style={inputStyle}
-                />
+                <div data-anim="field">
+                  <PhoneInput
+                    value={{
+                      telefonoPais: form.telefonoPais,
+                      telefonoPrefijo: form.telefonoPrefijo,
+                      telefonoNumero: form.telefonoNumero,
+                    }}
+                    onChange={(phone) =>
+                      setForm({
+                        ...form,
+                        telefonoPais: phone.telefonoPais,
+                        telefonoPrefijo: phone.telefonoPrefijo,
+                        telefonoNumero: phone.telefonoNumero,
+                      })
+                    }
+                    disabled={saving}
+                  />
+                </div>
               </Field>
 
               <Field label="Dirección">

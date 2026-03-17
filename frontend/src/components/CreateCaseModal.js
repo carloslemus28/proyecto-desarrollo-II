@@ -24,17 +24,39 @@ import PhoneInput from "../components/PhoneInput";
 import {formatFullPhone} from "../constants/phoneCountries";
 
 async function geocodeAddress(q) {
-  // Usamos Nominatim de OpenStreetMap para geocodificar la dirección
-  const url =
-    `https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&q=` +
-    encodeURIComponent(q);
+  const cleanQuery = `${q}, El Salvador`;
 
-  const res = await fetch(url, { headers: { Accept: "application/json" } });
-  if (!res.ok) throw new Error("No se pudo definir la dirección");
+  const url =
+    "https://nominatim.openstreetmap.org/search" +
+    "?format=jsonv2" +
+    "&limit=5" +
+    "&addressdetails=1" +
+    "&countrycodes=sv" +
+    "&bounded=1" +
+    "&viewbox=-90.15,14.45,-87.70,13.10" +
+    "&q=" + encodeURIComponent(cleanQuery);
+
+  const res = await fetch(url, {
+    headers: {
+      Accept: "application/json",
+      "Accept-Language": "es",
+    },
+  });
+
+  if (!res.ok) throw new Error("No se pudo geocodificar la dirección");
   const data = await res.json();
   if (!Array.isArray(data) || data.length === 0) return null;
 
-  return { lat: Number(data[0].lat), lng: Number(data[0].lon) };
+  // ✅ prioriza coincidencias más detalladas
+  const best =
+    data.find((x) => String(x.display_name || "").toLowerCase().includes("el salvador")) ||
+    data[0];
+
+  return {
+    lat: Number(best.lat),
+    lng: Number(best.lon),
+    displayName: best.display_name || cleanQuery,
+  };
 }
 // Componente principal
 export default function CreateCaseModal({ open, onClose, onCreated }) {
@@ -59,8 +81,8 @@ export default function CreateCaseModal({ open, onClose, onCreated }) {
   const [form, setForm] = useState({
     nombres: "",
     apellidos: "",
-    telefonoPais: "",
-    telefonoPrefijo: "",
+    telefonoPais: "SV",
+    telefonoPrefijo: "+503",
     telefonoNumero: "",
     direccion: "",
     lat: "",
@@ -248,7 +270,12 @@ export default function CreateCaseModal({ open, onClose, onCreated }) {
         return;
       }
 
-      setForm((p) => ({ ...p, lat: r.lat, lng: r.lng }));
+      setForm((p) => ({
+      ...p,
+      lat: r.lat,
+      lng: r.lng,
+      direccion: p.direccion || r.displayName,
+    }));
       setGeoMsg("Ubicación encontrada!");
     } catch (e) {
       setForm((p) => ({ ...p, lat: "", lng: "" }));

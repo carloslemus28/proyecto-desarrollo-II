@@ -26,6 +26,16 @@ import EditUserModal from "../components/EditUserModal";
 import ResetPasswordModal from "../components/ResetPasswordModal";
 import ConfirmModal from "../components/ConfirmModal";
 
+function getDisplayPhone(u) {
+  const prefijo = u?.TelefonoPrefijo || "";
+  const numero = u?.TelefonoNumero || "";
+  const legacy = u?.Telefono || "";
+
+  if (prefijo && numero) return `${prefijo} ${numero}`;
+  if (legacy) return legacy;
+  return "-";
+}
+
 export default function UsersPage() {
   const { user } = useAuth();
   const isAdmin = user?.roles?.includes("ADMIN");
@@ -73,7 +83,8 @@ export default function UsersPage() {
     if (!qq) return users;
 
     return users.filter((u) => {
-      const text = `${u.Nombre} ${u.Email} ${u.Telefono || ""}`.toLowerCase();
+      const phoneText = `${u.Telefono || ""} ${u.TelefonoPrefijo || ""} ${u.TelefonoNumero || ""}`;
+      const text = `${u.Nombre} ${u.Email} ${phoneText}`.toLowerCase();
       return text.includes(qq);
     });
   }, [users, q]);
@@ -165,7 +176,7 @@ export default function UsersPage() {
                 </div>
 
                 <div style={{ fontSize: 13, opacity: 0.8 }}>
-                  Tel: {u.Telefono || "-"} •{" "}
+                  Tel: {getDisplayPhone(u)} •
                   <span style={{ fontWeight: 600, color: u.Activo ? "#166534" : "#6b7280" }}>
                     {u.Activo ? "ACTIVO" : "INACTIVO"}
                   </span>
@@ -192,8 +203,6 @@ export default function UsersPage() {
                         setOpenMenuId(null);
                       }}
                     />
-
-                    
 
                     <MenuItem
                       label={u.Activo ? "Desactivar" : "Activar"}

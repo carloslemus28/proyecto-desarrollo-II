@@ -208,18 +208,24 @@ async function handleWhatsApp() {
   }
 }
 // Funciones para manejar enlaces de ubicación
-  function getMapsLink(lat, lng) {
-  if (lat == null || lng == null) return null;
-  return `https://www.google.com/maps?q=${lat},${lng}`;
-}
-// Función para obtener enlace de direcciones en Google Maps
-function getDirectionsLink(lat, lng) {
+function getDirectionsLink(lat, lng, direccion) {
+  if (direccion && direccion.trim()) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(direccion)}`;
+  }
   if (lat == null || lng == null) return null;
   return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
 }
+// Genera enlace para compartir ubicación (prioriza dirección si existe)
+function getMapsLink(lat, lng, direccion) {
+  if (direccion && direccion.trim()) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(direccion)}`;
+  }
+  if (lat == null || lng == null) return null;
+  return `https://www.google.com/maps?q=${lat},${lng}`;
+}
 // Función para manejar Cómo llegar - abre Google Maps con direcciones
 async function handleDirections() {
-  const url = getDirectionsLink(c?.Lat, c?.Lng);
+  const url = getDirectionsLink(c?.Lat, c?.Lng, c?.Direccion);
   if (!url) {
     showToast("Este caso no tiene ubicación registrada.", "warning", 5000);
     return;
@@ -228,7 +234,7 @@ async function handleDirections() {
 }
 // Función para manejar Compartir ubicación
 async function handleShareLocation() {
-  const url = getMapsLink(c?.Lat, c?.Lng);
+  const url = getMapsLink(c?.Lat, c?.Lng, c?.Direccion);
   if (!url) {
     showToast("Este caso no tiene ubicación registrada.", "warning", 5000);
     return;
@@ -428,6 +434,19 @@ async function confirmDeleteActivity() {
     return <div style={{ background: "#fff", borderRadius: 12, padding: 16 }}>Cargando...</div>;
   }
 
+  function getDisplayPhone(caseData) {
+  if (!caseData) return "Sin teléfono";
+
+  const prefijo = caseData.TelefonoPrefijo || "";
+  const numero = caseData.TelefonoNumero || "";
+  const legacy = caseData.Telefono || "";
+
+  if (prefijo && numero) return `${prefijo} ${numero}`;
+  if (legacy) return legacy;
+
+  return "Sin teléfono";
+}
+
   return (
     <>
       <div ref={rootRef} style={{ display: "grid", gap: 12 }} onClick={() => setOpenActMenuId(null)}>
@@ -440,7 +459,7 @@ async function confirmDeleteActivity() {
                 <b>
                   {c.Nombres} {c.Apellidos}
                 </b>{" "}
-                • {c.Telefono || "Sin teléfono"} • {c.Direccion || "Sin dirección"}
+                • {getDisplayPhone(c)} • {c.Direccion || "Sin dirección"}
               </div>
               <div style={{ fontSize: 13, opacity: 0.85, marginTop: 4 }}>
                 Estado: <b>{c.EstadoNombre}</b> • Monto: <b>${c.Monto}</b>

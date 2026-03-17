@@ -1,16 +1,3 @@
-/**
- * Servicio de Usuarios - Operaciones CRUD de gestión de usuarios
- * 
- * Responsabilidades:
- * - Crear nuevos usuarios con rol asignado
- * - Listar usuarios activos
- * - Actualizar datos de usuario (nombre, teléfono, estado)
- * - Resetear contraseña del usuario
- * - Verificar duplicación de email
- * 
- * Acceso: Solo funciones de controlador con permisos ADMIN/USERS_MANAGE
- */
-
 const bcrypt = require("bcryptjs");
 const { pool } = require("../config/db");
 
@@ -20,19 +7,29 @@ async function listUsers() {
       u.UsuarioId,
       u.Nombre,
       u.Email,
-      u.Telefono,
+      u.TelefonoPais,
+      u.TelefonoPrefijo,
+      u.TelefonoNumero,
       u.Activo,
       r.Nombre AS Rol
     FROM Usuarios u
-    JOIN UsuariosRoles ur ON ur.UsuarioId = u.UsuarioId
-    JOIN Roles r ON r.RolId = ur.RolId
-    ORDER BY u.UsuarioId DESC;
-    `
+    LEFT JOIN UsuariosRoles ur ON ur.UsuarioId = u.UsuarioId
+    LEFT JOIN Roles r ON r.RolId = ur.RolId
+    ORDER BY u.UsuarioId DESC`
   );
   return rows;
 }
 
-async function createUser({ nombre, email, telefono, password, rolNombre }) {
+async function createUser({
+  nombre,
+  email,
+  telefono,
+  telefonoPais,
+  telefonoPrefijo,
+  telefonoNumero,
+  password,
+  rolNombre
+}) {
   const passwordHash = await bcrypt.hash(password, 10);
 
   const conn = await pool.getConnection();
@@ -40,11 +37,24 @@ async function createUser({ nombre, email, telefono, password, rolNombre }) {
     await conn.beginTransaction();
 
     const [ins] = await conn.execute(
-      `INSERT INTO Usuarios (Nombre, Email, PasswordHash, Telefono, Activo)
-       VALUES (?, ?, ?, ?, 1)`,
-      [nombre, email, passwordHash, telefono || null]
+      `INSERT INTO Usuarios (
+        Nombre, Email, PasswordHash,
+        TelefonoPais, TelefonoPrefijo, TelefonoNumero,
+        Activo
+      )
+       VALUES (?, ?, ?, ?, ?, ?, 1)`,
+      [
+        nombre,
+        email,
+        passwordHash,
+        telefonoPais || null,
+        telefonoPrefijo || null,
+        telefonoNumero || null,
+      ]
     );
+
     const usuarioId = ins.insertId;
+
     const [roles] = await conn.execute(
       `SELECT RolId FROM Roles WHERE Nombre = ? AND Activo = 1`,
       [rolNombre]
@@ -66,7 +76,13 @@ async function createUser({ nombre, email, telefono, password, rolNombre }) {
   }
 }
 
-async function updateUser(usuarioId, { nombre, telefono, activo }) {
+async function updateUser(usuarioId, {
+  nombre,
+  telefonoPais,
+  telefonoPrefijo,
+  telefonoNumero,
+  activo
+}) {
   const fields = [];
   const values = [];
 
@@ -74,9 +90,17 @@ async function updateUser(usuarioId, { nombre, telefono, activo }) {
     fields.push("Nombre = ?");
     values.push(nombre.trim());
   }
-  if (telefono !== undefined) {
-    fields.push("Telefono = ?");
-    values.push(telefono === "" ? null : telefono);
+  if (telefonoPais !== undefined) {
+    fields.push("TelefonoPais = ?");
+    values.push(telefonoPais === "" ? null : telefonoPais);
+  }
+  if (telefonoPrefijo !== undefined) {
+    fields.push("TelefonoPrefijo = ?");
+    values.push(telefonoPrefijo === "" ? null : telefonoPrefijo);
+  }
+  if (telefonoNumero !== undefined) {
+    fields.push("TelefonoNumero = ?");
+    values.push(telefonoNumero === "" ? null : telefonoNumero);
   }
   if (activo !== undefined) {
     fields.push("Activo = ?");

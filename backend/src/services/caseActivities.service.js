@@ -29,7 +29,7 @@ async function listActivities(casoId) {
     `SELECT a.ActividadId, a.CasoId, a.UsuarioId, a.Tipo, a.Nota, a.CreadoEn,
             u.Nombre AS UsuarioNombre, u.Email AS UsuarioEmail
      FROM ActividadesCaso a
-     JOIN Usuarios u ON u.UsuarioId = a.UsuarioId
+     LEFT JOIN Usuarios u ON u.UsuarioId = a.UsuarioId
      WHERE a.CasoId = ? AND a.Activo = 1
      ORDER BY a.ActividadId DESC`,
     [casoId]

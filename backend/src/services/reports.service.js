@@ -63,14 +63,13 @@ async function getCasesReport(filters) {
       ce.Nombre AS EstadoNombre,
       d.Nombres,
       d.Apellidos,
-      d.Telefono,
       d.Direccion,
       c.AsignadoAUsuarioId,
       u.Nombre AS AgenteNombre,
       u.Email AS AgenteEmail
     FROM Casos c
-    JOIN CatalogoEstados ce ON ce.EstadoId = c.EstadoId
-    JOIN Deudores d ON d.DeudorId = c.DeudorId
+    LEFT JOIN CatalogoEstados ce ON ce.EstadoId = c.EstadoId
+    LEFT JOIN Deudores d ON d.DeudorId = c.DeudorId
     LEFT JOIN Usuarios u ON u.UsuarioId = c.AsignadoAUsuarioId
     ${where}
     ORDER BY c.CasoId DESC
@@ -85,7 +84,7 @@ async function getCasesReport(filters) {
       SUM(CASE WHEN ce.Codigo = 'PROMESA_PAGO' THEN 1 ELSE 0 END) AS promesasPago,
       SUM(CASE WHEN ce.Codigo <> 'CERRADO' THEN c.Monto ELSE 0 END) AS totalAdeudado
     FROM Casos c
-    JOIN CatalogoEstados ce ON ce.EstadoId = c.EstadoId
+    LEFT JOIN CatalogoEstados ce ON ce.EstadoId = c.EstadoId
     ${where}
   `;
 

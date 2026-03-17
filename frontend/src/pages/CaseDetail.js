@@ -194,11 +194,19 @@ export default function CaseDetail({ caseId, refreshKey }) {
     showToast("Actividad registrada", "success", 5000);
   }
 // Función para manejar clic en botón de WhatsApp
-  async function handleWhatsApp() {
-    pressAnim(btnWhatsRef);
+async function handleWhatsApp() {
+  pressAnim(btnWhatsRef);
+  try {
     const r = await getWhatsAppLink(caseId);
     window.open(r.url, "_blank");
+  } catch (e) {
+    showToast(
+      e?.response?.data?.message || "No se pudo generar el enlace de WhatsApp",
+      "error",
+      5000
+    );
   }
+}
 // Funciones para manejar enlaces de ubicación
   function getMapsLink(lat, lng) {
   if (lat == null || lng == null) return null;

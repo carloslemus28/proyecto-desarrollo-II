@@ -275,8 +275,15 @@ export default function EditCaseModal({ open, onClose, caseData, caseId, onSaved
     try {
       setSaving(true);
 
+      const montoNum = Number(edit.monto);
+      if (!Number.isFinite(montoNum) || montoNum <= 0) {
+        setError("Monto debe ser mayor que cero");
+        setSaving(false);
+        return;
+      }
+
       await updateCase(caseId, {
-        monto: edit.monto === "" ? 0 : Number(edit.monto),
+        monto: montoNum,
         descripcion: edit.descripcion,
         asignadoAUsuarioId: edit.asignadoAUsuarioId ? Number(edit.asignadoAUsuarioId) : null,
       });
@@ -348,6 +355,9 @@ export default function EditCaseModal({ open, onClose, caseData, caseId, onSaved
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <Field label="Monto">
                   <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
                     data-anim="field"
                     value={edit.monto}
                     onChange={(e) => setEdit({ ...edit, monto: e.target.value })}

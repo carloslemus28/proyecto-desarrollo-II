@@ -34,6 +34,30 @@ export default function ReportsPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
+  const regexFecha = /^\d{4}-\d{2}-\d{2}$/;
+
+  function normalizeDateInput(value) {
+    if (!value) return "";
+    let sanitized = value.replace(/[^0-9-]/g, "").slice(0, 10);
+    const parts = sanitized.split("-");
+    const year = (parts[0] || "").slice(0, 4);
+    const month = (parts[1] || "").slice(0, 2);
+    const day = (parts[2] || "").slice(0, 2);
+    let result = year;
+    if (month) result += "-" + month;
+    if (day) result += "-" + day;
+    return result;
+  }
+
+  function isValidDate(value) {
+    if (!value) return true;
+    if (!regexFecha.test(value)) return false;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return false;
+    const [year, month, day] = value.split("-").map(Number);
+    return date.getUTCFullYear() === year && date.getUTCMonth() + 1 === month && date.getUTCDate() === day;
+  }
+
   // agentes
   const [agents, setAgents] = useState([]);
 
@@ -111,6 +135,16 @@ export default function ReportsPage() {
 
   useEffect(() => {
     if (!isAdmin) return;
+
+    if (!isValidDate(from)) {
+      showToast("Fecha 'Desde' inválida. Formato: YYYY-MM-DD", "warning", 5000);
+      return;
+    }
+    if (!isValidDate(to)) {
+      showToast("Fecha 'Hasta' inválida. Formato: YYYY-MM-DD", "warning", 5000);
+      return;
+    }
+
     loadReport();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qs, isAdmin]);
@@ -197,12 +231,24 @@ export default function ReportsPage() {
 
           <div>
             <div style={label}>Desde</div>
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={input} />
+            <input
+              type="date"
+              value={from}
+              maxLength={10}
+              onChange={(e) => setFrom(normalizeDateInput(e.target.value))}
+              style={input}
+            />
           </div>
 
           <div>
             <div style={label}>Hasta</div>
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} style={input} />
+            <input
+              type="date"
+              value={to}
+              maxLength={10}
+              onChange={(e) => setTo(normalizeDateInput(e.target.value))}
+              style={input}
+            />
           </div>
         </div>
 

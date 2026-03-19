@@ -153,6 +153,21 @@ CREATE TABLE IF NOT EXISTS RefreshTokens (
     FOREIGN KEY (UsuarioId) REFERENCES Usuarios(UsuarioId)
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS PagosCaso (
+  PagoId INT NOT NULL AUTO_INCREMENT,
+  CasoId INT NOT NULL,
+  UsuarioId INT NOT NULL,
+  TipoPago VARCHAR(20) NOT NULL, 
+  Monto DECIMAL(18,2) NOT NULL,
+  Observacion VARCHAR(500) NULL,
+  CreadoEn DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  Activo TINYINT(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (PagoId),
+  CONSTRAINT FK_PagosCaso_Casos FOREIGN KEY (CasoId) REFERENCES Casos(CasoId),
+  CONSTRAINT FK_PagosCaso_Usuarios FOREIGN KEY (UsuarioId) REFERENCES Usuarios(UsuarioId)
+) ENGINE=InnoDB;
+
+CREATE INDEX IX_PagosCaso_CasoId ON PagosCaso(CasoId);
 -- INSERCION DE DATOS BASE (roles, permisos, estados)
 
 INSERT INTO Roles (Nombre) VALUES ('ADMIN'), ('AGENTE');

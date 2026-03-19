@@ -20,13 +20,32 @@ const { pool } = require("../config/db");
 /**
  * Extrae y valida los filtros de la query string
  */
+const regexFecha = /^\d{4}-\d{2}-\d{2}$/;
+
+function isValidDateYMD(value) {
+  if (!value || !regexFecha.test(value)) return false;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+
+  const [year, month, day] = value.split("-").map(Number);
+  return date.getUTCFullYear() === year && date.getUTCMonth() + 1 === month && date.getUTCDate() === day;
+}
+
 function parseFilters(req) {
   const estado = (req.query.estado || "").trim() || null;
   const agenteIdRaw = (req.query.agenteId || "").trim();
   const agenteId = agenteIdRaw ? Number(agenteIdRaw) : null;
 
-  const from = (req.query.from || "").trim() || null;
-  const to = (req.query.to || "").trim() || null;
+  let from = (req.query.from || "").trim() || null;
+  let to = (req.query.to || "").trim() || null;
+
+  if (from && !isValidDateYMD(from)) {
+    throw new Error("Fecha 'from' inválida. Utiliza formato YYYY-MM-DD");
+  }
+  if (to && !isValidDateYMD(to)) {
+    throw new Error("Fecha 'to' inválida. Utiliza formato YYYY-MM-DD");
+  }
 
   return { estado, agenteId, from, to };
 }

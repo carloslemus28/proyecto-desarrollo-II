@@ -302,6 +302,13 @@ export default function CreateCaseModal({ open, onClose, onCreated }) {
     try {
       setSaving(true);
 
+      const montoNum = Number(form.monto);
+      if (!Number.isFinite(montoNum) || montoNum <= 0) {
+        setError("Monto debe ser mayor que cero");
+        setSaving(false);
+        return;
+      }
+
       await createCase({
         deudor: {
           nombres: form.nombres.trim(),
@@ -315,7 +322,7 @@ export default function CreateCaseModal({ open, onClose, onCreated }) {
           lng: form.lng === "" ? null : Number(form.lng),
         },
         caso: {
-          monto: form.monto === "" ? 0 : Number(form.monto),
+          monto: montoNum,
           descripcion: form.descripcion.trim() || null,
           estadoCodigo: form.estadoCodigo,
           asignadoAUsuarioId: form.asignadoAUsuarioId ? Number(form.asignadoAUsuarioId) : null,
@@ -480,6 +487,9 @@ export default function CreateCaseModal({ open, onClose, onCreated }) {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <Field label="Monto">
                   <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
                     data-anim="field"
                     value={form.monto}
                     onChange={(e) => setForm({ ...form, monto: e.target.value })}

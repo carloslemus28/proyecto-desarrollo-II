@@ -37,6 +37,11 @@ async function createCase({ deudor, caso }) {
     const next = Number(maxRows[0].maxId) + 1;
     const codigoCaso = `CASO-${String(next).padStart(6, "0")}`;
 
+    const monto = Number(caso.monto ?? 0);
+    if (!Number.isFinite(monto) || monto <= 0) {
+      throw new Error("Monto debe ser mayor que cero");
+    }
+
     const [insCaso] = await conn.execute(
       `INSERT INTO Casos (CodigoCaso, DeudorId, EstadoId, Monto, Descripcion, AsignadoAUsuarioId)
        VALUES (?, ?, ?, ?, ?, ?)`,
@@ -44,7 +49,7 @@ async function createCase({ deudor, caso }) {
         codigoCaso,
         deudorId,
         estadoRows[0].EstadoId,
-        caso.monto || 0,
+        monto,
         caso.descripcion || null,
         caso.asignadoAUsuarioId || null,
       ]
@@ -146,8 +151,12 @@ async function updateCase(casoId, { monto, descripcion, asignadoAUsuarioId }) {
   const values = [];
 
   if (monto !== undefined) {
+    const montoNum = Number(monto);
+    if (!Number.isFinite(montoNum) || montoNum <= 0) {
+      throw new Error("Monto debe ser mayor que cero");
+    }
     fields.push("Monto = ?");
-    values.push(monto);
+    values.push(montoNum);
   }
   if (descripcion !== undefined) {
     fields.push("Descripcion = ?");

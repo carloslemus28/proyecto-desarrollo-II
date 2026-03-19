@@ -16,6 +16,12 @@ async function createCaseController(req, res) {
     if (!deudor?.nombres || !deudor?.apellidos) {
       return res.status(400).json({ ok: false, message: "Deudor nombres y apellidos requeridos" });
     }
+
+    const monto = Number(caso?.monto ?? 0);
+    if (!Number.isFinite(monto) || monto <= 0) {
+      return res.status(400).json({ ok: false, message: "Monto debe ser mayor que cero" });
+    }
+
     const r = await createCase({ deudor, caso: caso || {} });
     res.status(201).json({ ok: true, ...r });
   } catch (e) {
@@ -104,6 +110,14 @@ async function updateCaseController(req, res) {
     }
 
     const { monto, descripcion, asignadoAUsuarioId } = req.body || {};
+
+    if (monto !== undefined) {
+      const montoNum = Number(monto);
+      if (!Number.isFinite(montoNum) || montoNum <= 0) {
+        return res.status(400).json({ ok: false, message: "Monto debe ser mayor que cero" });
+      }
+    }
+
     await updateCase(casoId, { monto, descripcion, asignadoAUsuarioId });
 
     res.json({ ok: true });

@@ -215,13 +215,15 @@ function getDirectionsLink(lat, lng, direccion) {
   if (lat == null || lng == null) return null;
   return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
 }
-// Genera enlace para compartir ubicación (prioriza dirección si existe)
+// Genera enlace para compartir ubicación (prefiere coordenadas por precisión)
 function getMapsLink(lat, lng, direccion) {
+  if (lat != null && lng != null) {
+    return `https://www.google.com/maps?q=${lat},${lng}`;
+  }
   if (direccion && direccion.trim()) {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(direccion)}`;
   }
-  if (lat == null || lng == null) return null;
-  return `https://www.google.com/maps?q=${lat},${lng}`;
+  return null;
 }
 // Función para manejar Cómo llegar - abre Google Maps con direcciones
 async function handleDirections() {

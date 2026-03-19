@@ -52,9 +52,28 @@ async function updateActivity(id, data, usuarioId, roles = []) {
     throw new Error("No tienes permiso para editar esta actividad");
   }
 
+  let notaToSave = data.nota;
+  if (typeof notaToSave === "string") {
+    notaToSave = notaToSave.trim();
+
+    notaToSave = notaToSave.replace(/\s*\(editado:\s*[^)]+\)$/i, "");
+
+    const editadoEn = new Date().toLocaleString("es-ES", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false
+    });
+
+    notaToSave = `${notaToSave} (editado: ${editadoEn})`;
+  }
+
   await pool.execute(
     `UPDATE ActividadesCaso SET Nota = ?, Tipo = ? WHERE ActividadId = ?`,
-    [data.nota, data.tipo, id]
+    [notaToSave, data.tipo, id]
   );
 }
 

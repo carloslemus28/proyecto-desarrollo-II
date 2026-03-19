@@ -40,7 +40,7 @@ import ConfirmModal from "../components/ConfirmModal";
 import { useToast } from "../ui/ToastContext";
 import RegisterPaymentModal from "../components/RegisterPaymentModal";
 
-export default function CaseDetail({ caseId, refreshKey }) {
+export default function CaseDetail({ caseId, refreshKey, onCaseUpdated }) {
   const { user } = useAuth();
   const isAdmin = user?.roles?.includes("ADMIN");
 
@@ -825,6 +825,11 @@ async function confirmDeleteActivity() {
         onConfirm={async (payload) => {
           await addPayment(caseId, payload);
           await load();
+
+          if (onCaseUpdated) {
+            await onCaseUpdated();
+          }
+
           showToast("Pago registrado correctamente", "success", 5000);
         }}
       />

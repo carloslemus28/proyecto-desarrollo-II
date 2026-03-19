@@ -337,7 +337,13 @@ export default function CasesPage() {
               onClick={(e) => e.stopPropagation()}
               style={{ height: "100%" }}
             >
-              <CaseDetail caseId={selected} refreshKey={detailRefreshKey} />
+              <CaseDetail
+              caseId={selected}
+              refreshKey={detailRefreshKey}
+              onCaseUpdated={async () => {
+                await load();
+              }}
+            />
             </div>
           ) : (
             <div style={{ background: "#fff", borderRadius: 12, padding: 16 }}>

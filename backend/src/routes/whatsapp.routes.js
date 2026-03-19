@@ -20,16 +20,14 @@ function normalizePhone(phone) {
   const digits = String(phone).replace(/\D/g, "");
   return digits || null;
 }
-
+// Construye el número de teléfono para WhatsApp, priorizando el formato separado
 function buildWhatsAppPhone(row) {
-  // ✅ prioridad: nuevo esquema separado
   const prefijo = row.TelefonoPrefijo ? String(row.TelefonoPrefijo) : "";
   const numero = row.TelefonoNumero ? String(row.TelefonoNumero) : "";
 
   const composed = normalizePhone(`${prefijo}${numero}`);
   if (composed) return composed;
 
-  // ✅ fallback: esquema anterior
   return normalizePhone(row.Telefono);
 }
 

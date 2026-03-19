@@ -32,10 +32,13 @@ import {
   listFiles,
   uploadFile,
   deleteFile,
+  listPayments,
+  addPayment,
 } from "../services/cases.service";
 import { useAuth } from "../auth/AuthContext";
 import ConfirmModal from "../components/ConfirmModal";
 import { useToast } from "../ui/ToastContext";
+import RegisterPaymentModal from "../components/RegisterPaymentModal";
 
 export default function CaseDetail({ caseId, refreshKey }) {
   const { user } = useAuth();
@@ -72,6 +75,10 @@ export default function CaseDetail({ caseId, refreshKey }) {
   const [actToDelete, setActToDelete] = useState(null);
   const [deletingAct, setDeletingAct] = useState(false);
 
+  // Modal registrar pago
+  const [payments, setPayments] = useState([]);
+  const [openPaymentModal, setOpenPaymentModal] = useState(false);
+
   // Referencias para animaciones
   const rootRef = useRef(null);
   const headerRef = useRef(null);
@@ -107,6 +114,9 @@ export default function CaseDetail({ caseId, refreshKey }) {
 
     const r3 = await listFiles(caseId);
     setFiles(r3.files || []);
+
+    const r4 = await listPayments(caseId);
+    setPayments(r4.payments || []);
   }
 
   useEffect(() => {
@@ -449,6 +459,12 @@ async function confirmDeleteActivity() {
   return "Sin teléfono";
 }
 
+  function formatTipoPago(tipo) {
+    if (!tipo) return "";
+    if (tipo === "PAGO_TOTAL") return "PAGO TOTAL";
+    return tipo;
+  }
+
   return (
     <>
       <div ref={rootRef} style={{ display: "grid", gap: 12 }} onClick={() => setOpenActMenuId(null)}>
@@ -468,6 +484,20 @@ async function confirmDeleteActivity() {
               </div>
             </div>
               <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                <button
+                  onClick={() => setOpenPaymentModal(true)}
+                  style={{
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    border: "1px solid #e5e7eb",
+                    cursor: "pointer",
+                    background: "#fff",
+                    fontWeight: 700,
+                  }}
+                  title="Registrar abono o pago total"
+                >
+                  Registrar pago
+                </button>
                 <button
                   onClick={handleDirections}
                   style={{
@@ -696,7 +726,56 @@ async function confirmDeleteActivity() {
           </div>
         </div>
       </div>
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: 12,
+          padding: 14,
+          marginTop: 16,
+          boxShadow: "0 8px 24px rgba(0,0,0,0.05)",
+        }}
+      >
+        <h3>Pagos / Abonos</h3>
 
+        <div style={{ fontSize: 13, opacity: 0.8, marginTop: 6 }}>
+          Saldo actual del caso: <b>${Number(c.Monto || 0).toFixed(2)}</b>
+        </div>
+
+        <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
+          {payments.map((p) => (
+            <div
+              key={p.PagoId}
+              style={{
+                padding: 12,
+                borderRadius: 12,
+                border: "1px solid #e5e7eb",
+                background: "#f8fafc",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                <b>{formatTipoPago(p.TipoPago)}</b>
+                <span style={{ fontSize: 12, opacity: 0.75 }}>
+                  {new Date(p.CreadoEn).toLocaleString()}
+                </span>
+              </div>
+
+              <div style={{ fontSize: 13, opacity: 0.9, marginTop: 4 }}>
+                Monto: <b>${Number(p.Monto || 0).toFixed(2)}</b>
+              </div>
+
+              <div style={{ fontSize: 13, opacity: 0.85, marginTop: 4 }}>
+                {p.Observacion || "Sin observación"}
+              </div>
+
+              <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
+                Registrado por: {p.UsuarioNombre}
+              </div>
+            </div>
+          ))}
+
+          {payments.length === 0 ? <p>No hay pagos registrados.</p> : null}
+        </div>
+      </div>
       {/*Modal confirmación Eliminar Archivo */}
       <ConfirmModal
         open={openDeleteFile}
@@ -737,6 +816,17 @@ async function confirmDeleteActivity() {
           setActToDelete(null);
         }}
         onConfirm={confirmDeleteActivity}
+      />
+
+      <RegisterPaymentModal
+        open={openPaymentModal}
+        onClose={() => setOpenPaymentModal(false)}
+        caseData={c}
+        onConfirm={async (payload) => {
+          await addPayment(caseId, payload);
+          await load();
+          showToast("Pago registrado correctamente", "success", 5000);
+        }}
       />
 
       {/*Modal simple Editar Actividad (mínimo y consistente) */}

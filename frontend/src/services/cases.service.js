@@ -102,3 +102,15 @@ export async function updateCaseStatus(caseId, estadoCodigo) {
 export async function changeCaseStatus(caseId, estadoCodigo) {
   return updateCaseStatus(caseId, estadoCodigo);
 }
+
+// Listar pagos asociados a un caso específico por ID
+export async function listPayments(caseId) {
+  const { data } = await api.get(`/cases/${caseId}/payments`);
+  return data;
+}
+
+// Agregar un nuevo pago a un caso específico por ID con los datos del pago
+export async function addPayment(caseId, payload) {
+  const { data } = await api.post(`/cases/${caseId}/payments`, payload);
+  return data;
+}

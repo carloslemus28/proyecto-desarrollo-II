@@ -1,13 +1,12 @@
 /**
  * Servicio de Reportes - Generación de reportes en múltiples formatos
- * 
+ *
  * Responsabilidades:
  * - Generar reportes de casos con filtros avanzados
- * - Calcular KPIs (Total adeudado, casos por estado, etc.)
+ * - Calcular KPIs (Total adeudado, total abonado, casos por estado, etc.)
  * - Exportar a CSV para análisis
  * - Exportar a PDF profesional con diseño
- * - Incluir gráficos y estadísticas en reportes
- * 
+ *
  * Filtros soportados:
  * - Estado del caso
  * - Agente asignado
@@ -63,14 +62,28 @@ async function getCasesReport(filters) {
       ce.Nombre AS EstadoNombre,
       d.Nombres,
       d.Apellidos,
+      d.TelefonoPais,
+      d.TelefonoPrefijo,
+      d.TelefonoNumero,
       d.Direccion,
       c.AsignadoAUsuarioId,
       u.Nombre AS AgenteNombre,
-      u.Email AS AgenteEmail
+      u.Email AS AgenteEmail,
+      IFNULL(p.TotalAbonado, 0) AS TotalAbonado,
+      IFNULL(p.CantidadPagos, 0) AS CantidadPagos
     FROM Casos c
     LEFT JOIN CatalogoEstados ce ON ce.EstadoId = c.EstadoId
     LEFT JOIN Deudores d ON d.DeudorId = c.DeudorId
     LEFT JOIN Usuarios u ON u.UsuarioId = c.AsignadoAUsuarioId
+    LEFT JOIN (
+      SELECT
+        CasoId,
+        SUM(Monto) AS TotalAbonado,
+        COUNT(*) AS CantidadPagos
+      FROM PagosCaso
+      WHERE Activo = 1
+      GROUP BY CasoId
+    ) p ON p.CasoId = c.CasoId
     ${where}
     ORDER BY c.CasoId DESC
   `;
@@ -82,9 +95,18 @@ async function getCasesReport(filters) {
       SUM(CASE WHEN ce.Codigo <> 'CERRADO' THEN 1 ELSE 0 END) AS casosActivos,
       SUM(CASE WHEN ce.Codigo = 'CERRADO' THEN 1 ELSE 0 END) AS casosCerrados,
       SUM(CASE WHEN ce.Codigo = 'PROMESA_PAGO' THEN 1 ELSE 0 END) AS promesasPago,
-      SUM(CASE WHEN ce.Codigo <> 'CERRADO' THEN c.Monto ELSE 0 END) AS totalAdeudado
+      SUM(CASE WHEN ce.Codigo <> 'CERRADO' THEN c.Monto ELSE 0 END) AS totalAdeudado,
+      IFNULL(SUM(p.TotalAbonado), 0) AS totalAbonado
     FROM Casos c
     LEFT JOIN CatalogoEstados ce ON ce.EstadoId = c.EstadoId
+    LEFT JOIN (
+      SELECT
+        CasoId,
+        SUM(Monto) AS TotalAbonado
+      FROM PagosCaso
+      WHERE Activo = 1
+      GROUP BY CasoId
+    ) p ON p.CasoId = c.CasoId
     ${where}
   `;
 
@@ -94,6 +116,7 @@ async function getCasesReport(filters) {
     casosCerrados: 0,
     promesasPago: 0,
     totalAdeudado: 0,
+    totalAbonado: 0,
   };
 
   const normalizedKpi = {
@@ -101,12 +124,13 @@ async function getCasesReport(filters) {
     casosCerrados: Number(kpi.casosCerrados || 0),
     promesasPago: Number(kpi.promesasPago || 0),
     totalAdeudado: Number(kpi.totalAdeudado || 0),
+    totalAbonado: Number(kpi.totalAbonado || 0),
   };
 
   return { cases: rows, kpi: normalizedKpi };
 }
 
-/*CSV Export */
+/* CSV Export */
 
 function escCsv(v) {
   if (v == null) return "";
@@ -120,7 +144,9 @@ function buildCsv(rows, kpi) {
   const header = [
     "CodigoCaso",
     "Estado",
-    "Monto",
+    "SaldoActual",
+    "TotalAbonado",
+    "CantidadPagos",
     "FechaApertura",
     "FechaCierre",
     "Deudor",
@@ -133,22 +159,30 @@ function buildCsv(rows, kpi) {
     const deudor = `${r.Nombres || ""} ${r.Apellidos || ""}`.trim();
     const agente = r.AgenteNombre ? `${r.AgenteNombre} (${r.AgenteEmail || ""})` : "Sin asignar";
 
+    const telefono =
+      r.TelefonoPrefijo && r.TelefonoNumero
+        ? `${r.TelefonoPrefijo} ${r.TelefonoNumero}`
+        : (r.Telefono || "");
+
     return [
       escCsv(r.CodigoCaso),
       escCsv(r.EstadoCodigo),
       escCsv(r.Monto),
+      escCsv(r.TotalAbonado),
+      escCsv(r.CantidadPagos),
       escCsv(r.FechaApertura),
       escCsv(r.FechaCierre),
       escCsv(deudor),
-      escCsv(r.Telefono),
+      escCsv(telefono),
       escCsv(r.Direccion),
       escCsv(agente),
     ].join(",");
   });
 
   const kpiLines = [
-    "KPI,Valor",
+    "Indicador,Valor",
     `Total adeudado,${escCsv(kpi.totalAdeudado)}`,
+    `Total abonado,${escCsv(kpi.totalAbonado)}`,
     `Casos activos,${escCsv(kpi.casosActivos)}`,
     `Casos cerrados,${escCsv(kpi.casosCerrados)}`,
     `Promesas de pago,${escCsv(kpi.promesasPago)}`,
@@ -207,6 +241,7 @@ function buildPdfBuffer({ cases, kpi, filters, generatedBy, generatedAt }) {
 
         doc.fontSize(18).fillColor("#111");
         doc.text(`Total adeudado: ${money(kpi?.totalAdeudado)}`);
+        doc.text(`Total abonado: ${money(kpi?.totalAbonado)}`);
         doc.text(`Casos activos: ${Number(kpi?.casosActivos || 0)}`);
         doc.text(`Casos cerrados: ${Number(kpi?.casosCerrados || 0)}`);
         doc.text(`Promesas de pago: ${Number(kpi?.promesasPago || 0)}`);
@@ -216,18 +251,20 @@ function buildPdfBuffer({ cases, kpi, filters, generatedBy, generatedAt }) {
 
       const W = contentWidth;
 
-      const wCodigo  = Math.floor(W * 0.20);
-      const wEstado  = Math.floor(W * 0.16);
-      const wAgente  = Math.floor(W * 0.30);
-      const wMonto   = Math.floor(W * 0.14);
-      const wApert   = W - (wCodigo + wEstado + wAgente + wMonto);
+      const wCodigo = Math.floor(W * 0.15);
+      const wEstado = Math.floor(W * 0.14);
+      const wAgente = Math.floor(W * 0.24);
+      const wSaldo = Math.floor(W * 0.12);
+      const wAbonado = Math.floor(W * 0.12);
+      const wApert = W - (wCodigo + wEstado + wAgente + wSaldo + wAbonado);
 
       const col = {
-        codigo:  { x: left,                       w: wCodigo },
-        estado:  { x: left + wCodigo,            w: wEstado },
-        agente:  { x: left + wCodigo + wEstado,  w: wAgente },
-        monto:   { x: left + wCodigo + wEstado + wAgente, w: wMonto },
-        apertura:{ x: left + wCodigo + wEstado + wAgente + wMonto, w: wApert },
+        codigo:  { x: left, w: wCodigo },
+        estado:  { x: left + wCodigo, w: wEstado },
+        agente:  { x: left + wCodigo + wEstado, w: wAgente },
+        saldo:   { x: left + wCodigo + wEstado + wAgente, w: wSaldo },
+        abonado: { x: left + wCodigo + wEstado + wAgente + wSaldo, w: wAbonado },
+        apertura:{ x: left + wCodigo + wEstado + wAgente + wSaldo + wAbonado, w: wApert },
       };
 
       const tableLeft = left;
@@ -249,14 +286,15 @@ function buildPdfBuffer({ cases, kpi, filters, generatedBy, generatedAt }) {
         doc.restore();
 
         doc.fillColor("#111");
-        doc.fontSize(10);
+        doc.fontSize(9);
 
         const yy = y + 8;
 
-        doc.text("Código", col.codigo.x + 8, yy, { width: col.codigo.w - 16 });
+        doc.text("Código", tableLeft + 8, yy, { width: col.codigo.w - 16 });
         doc.text("Estado", col.estado.x + 8, yy, { width: col.estado.w - 16 });
         doc.text("Agente", col.agente.x + 8, yy, { width: col.agente.w - 16 });
-        doc.text("Monto", col.monto.x + 8, yy, { width: col.monto.w - 16, align: "right" });
+        doc.text("Saldo", col.saldo.x + 8, yy, { width: col.saldo.w - 16, align: "right" });
+        doc.text("Abonado", col.abonado.x + 8, yy, { width: col.abonado.w - 16, align: "right" });
         doc.text("Apertura", col.apertura.x + 8, yy, { width: col.apertura.w - 16 });
 
         doc
@@ -289,26 +327,32 @@ function buildPdfBuffer({ cases, kpi, filters, generatedBy, generatedAt }) {
         const agenteLine2 = agenteEmail ? `(${agenteEmail})` : "";
 
         doc.fillColor("#111");
-        doc.fontSize(9);
+        doc.fontSize(8.5);
 
-        doc.text(String(r?.CodigoCaso || ""), col.codigo.x + 8, y, { width: col.codigo.w - 16 });
+        doc.text(String(r?.CodigoCaso || ""), tableLeft + 8, y, { width: col.codigo.w - 16 });
         doc.text(String(r?.EstadoCodigo || ""), col.estado.x + 8, y, { width: col.estado.w - 16 });
         doc.text(agenteLine1, col.agente.x + 8, y, { width: col.agente.w - 16 });
 
         if (agenteLine2) {
-          doc.fillColor("#374151").fontSize(8);
-          doc.text(agenteLine2, col.agente.x + 8, y + 14, { width: col.agente.w - 16 });
-          doc.fillColor("#111").fontSize(9);
+          doc.fillColor("#374151").fontSize(7.5);
+          doc.text(agenteLine2, col.agente.x + 8, y + 12, { width: col.agente.w - 16 });
+          doc.fillColor("#111").fontSize(8.5);
         }
 
-        doc.text(money(r?.Monto), col.monto.x + 8, y, {
-          width: col.monto.w - 16,
+        doc.text(money(r?.Monto), col.saldo.x + 8, y, {
+          width: col.saldo.w - 16,
+          align: "right",
+        });
+
+        doc.text(money(r?.TotalAbonado), col.abonado.x + 8, y, {
+          width: col.abonado.w - 16,
           align: "right",
         });
 
         doc.text(formatDateTime(r?.FechaApertura), col.apertura.x + 8, y, {
           width: col.apertura.w - 16,
         });
+
         doc
           .moveTo(tableLeft, y + rowH)
           .lineTo(tableRight, y + rowH)
@@ -331,7 +375,10 @@ function buildPdfBuffer({ cases, kpi, filters, generatedBy, generatedAt }) {
 
       if ((cases || []).length > maxRows) {
         doc.moveDown(0.6);
-        doc.fontSize(12).fillColor("#6b7280").text(`* Se exportaron ${maxRows} de ${cases.length} casos (límite del PDF).`);
+        doc
+          .fontSize(12)
+          .fillColor("#6b7280")
+          .text(`* Se exportaron ${maxRows} de ${cases.length} casos (límite del PDF).`);
       }
 
       doc.end();

@@ -50,4 +50,8 @@ router.use(filesRoutes);
 const reportsRoutes = require("./reports.routes");
 router.use(reportsRoutes);
 
+// Rutas de pagos de casos
+const casePaymentsRoutes = require("./casePayments.routes");
+router.use(casePaymentsRoutes);
+
 module.exports = router;

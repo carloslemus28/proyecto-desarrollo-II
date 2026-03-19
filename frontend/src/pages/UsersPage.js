@@ -115,7 +115,7 @@ export default function UsersPage() {
           <div>
             <h2>Usuarios</h2>
             <p style={{ opacity: 0.7, marginTop: 6 }}>
-              Gestión profesional: crear, editar, activar/desactivar y cambiar contraseña.
+              Gestión de Usuarios.
             </p>
           </div>
 

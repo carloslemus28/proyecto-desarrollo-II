@@ -196,9 +196,6 @@ export default function ReportsPage() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
           <div>
             <h2>Reportes</h2>
-            <p style={{ opacity: 0.7, marginTop: 6 }}>
-              Reporte de casos por estado, agente y rango de fechas.
-            </p>
           </div>
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>

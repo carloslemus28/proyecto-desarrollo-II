@@ -735,7 +735,7 @@ async function confirmDeleteActivity() {
           boxShadow: "0 8px 24px rgba(0,0,0,0.05)",
         }}
       >
-        <h3>Pagos / Abonos</h3>
+        <h3>Pagos y Abonos</h3>
 
         <div style={{ fontSize: 13, opacity: 0.8, marginTop: 6 }}>
           Saldo actual del caso: <b>${Number(c.Monto || 0).toFixed(2)}</b>

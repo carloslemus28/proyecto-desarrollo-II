@@ -10,9 +10,15 @@ async function listPaymentsByCase(casoId) {
         p.Monto,
         p.Observacion,
         p.CreadoEn,
-        u.Nombre AS UsuarioNombre
+        p.Anulado,
+        p.AnuladoPorUsuarioId,
+        p.AnuladoEn,
+        p.MotivoAnulacion,
+        u.Nombre AS UsuarioNombre,
+        ua.Nombre AS UsuarioAnulacionNombre
      FROM PagosCaso p
      JOIN Usuarios u ON u.UsuarioId = p.UsuarioId
+     LEFT JOIN Usuarios ua ON ua.UsuarioId = p.AnuladoPorUsuarioId
      WHERE p.CasoId = ? AND p.Activo = 1
      ORDER BY p.PagoId DESC`,
     [casoId]
@@ -110,7 +116,94 @@ async function addPaymentToCase({ casoId, usuarioId, tipoPago, monto, observacio
   }
 }
 
+async function cancelPaymentInCase({ pagoId, usuarioId, motivo }) {
+  const conn = await pool.getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    if (!motivo || !String(motivo).trim()) {
+      throw new Error("El motivo de anulación es requerido");
+    }
+
+    const [paymentRows] = await conn.execute(
+      `SELECT PagoId, CasoId, TipoPago, Monto, Anulado
+       FROM PagosCaso
+       WHERE PagoId = ? AND Activo = 1
+       LIMIT 1`,
+      [pagoId]
+    );
+
+    const pago = paymentRows[0];
+    if (!pago) throw new Error("Pago no encontrado");
+    if (Number(pago.Anulado) === 1) throw new Error("Este pago ya fue anulado");
+
+    const [caseRows] = await conn.execute(
+      `SELECT CasoId, Monto
+       FROM Casos
+       WHERE CasoId = ? AND Activo = 1
+       LIMIT 1`,
+      [pago.CasoId]
+    );
+
+    const caso = caseRows[0];
+    if (!caso) throw new Error("Caso no encontrado");
+
+    const saldoActual = Number(caso.Monto || 0);
+    const montoPago = Number(pago.Monto || 0);
+    const nuevoSaldo = Number((saldoActual + montoPago).toFixed(2));
+
+    await conn.execute(
+      `UPDATE PagosCaso
+       SET Anulado = 1,
+           AnuladoPorUsuarioId = ?,
+           AnuladoEn = NOW(),
+           MotivoAnulacion = ?
+       WHERE PagoId = ?`,
+      [usuarioId, String(motivo).trim(), pagoId]
+    );
+
+    const [estadoGestionRows] = await conn.execute(
+      `SELECT EstadoId
+       FROM CatalogoEstados
+       WHERE Codigo = 'EN_GESTION' AND Activo = 1
+       LIMIT 1`
+    );
+    const estadoGestionId = estadoGestionRows?.[0]?.EstadoId || null;
+
+    if (nuevoSaldo > 0 && estadoGestionId) {
+      await conn.execute(
+        `UPDATE Casos
+         SET Monto = ?, EstadoId = ?, FechaCierre = NULL
+         WHERE CasoId = ?`,
+        [nuevoSaldo, estadoGestionId, pago.CasoId]
+      );
+    } else {
+      await conn.execute(
+        `UPDATE Casos
+         SET Monto = ?
+         WHERE CasoId = ?`,
+        [nuevoSaldo, pago.CasoId]
+      );
+    }
+
+    await conn.commit();
+
+    return {
+      pagoId,
+      casoId: pago.CasoId,
+      saldoActual: nuevoSaldo,
+    };
+  } catch (e) {
+    await conn.rollback();
+    throw e;
+  } finally {
+    conn.release();
+  }
+}
+
 module.exports = {
   listPaymentsByCase,
   addPaymentToCase,
+  cancelPaymentInCase,
 };

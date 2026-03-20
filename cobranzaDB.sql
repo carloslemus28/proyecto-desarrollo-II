@@ -212,3 +212,11 @@ SELECT u.UsuarioId, r.RolId
 FROM Usuarios u
 JOIN Roles r ON r.Nombre = 'ADMIN'
 WHERE u.Email = 'admin@cobranza.com';
+
+ALTER TABLE PagosCaso
+ADD COLUMN Anulado TINYINT(1) NOT NULL DEFAULT 0,
+ADD COLUMN AnuladoPorUsuarioId INT NULL,
+ADD COLUMN AnuladoEn DATETIME NULL,
+ADD COLUMN MotivoAnulacion VARCHAR(500) NULL,
+ADD CONSTRAINT FK_PagosCaso_AnuladoPorUsuario
+FOREIGN KEY (AnuladoPorUsuarioId) REFERENCES Usuarios(UsuarioId);

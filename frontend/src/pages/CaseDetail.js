@@ -34,11 +34,13 @@ import {
   deleteFile,
   listPayments,
   addPayment,
+  cancelPayment,
 } from "../services/cases.service";
 import { useAuth } from "../auth/AuthContext";
 import ConfirmModal from "../components/ConfirmModal";
 import { useToast } from "../ui/ToastContext";
 import RegisterPaymentModal from "../components/RegisterPaymentModal";
+import CancelPaymentModal from "../components/CancelPaymentModal";
 
 export default function CaseDetail({ caseId, refreshKey, onCaseUpdated }) {
   const { user } = useAuth();
@@ -78,6 +80,11 @@ export default function CaseDetail({ caseId, refreshKey, onCaseUpdated }) {
   // Modal registrar pago
   const [payments, setPayments] = useState([]);
   const [openPaymentModal, setOpenPaymentModal] = useState(false);
+
+  // Modal anular pago
+  const [openCancelPayment, setOpenCancelPayment] = useState(false);
+  const [paymentToCancel, setPaymentToCancel] = useState(null);
+  const [cancelingPayment, setCancelingPayment] = useState(false);
 
   // Referencias para animaciones
   const rootRef = useRef(null);
@@ -235,6 +242,7 @@ function getMapsLink(lat, lng, direccion) {
   }
   return null;
 }
+
 // Función para manejar Cómo llegar - abre Google Maps con direcciones
 async function handleDirections() {
   const url = getDirectionsLink(c?.Lat, c?.Lng, c?.Direccion);
@@ -464,6 +472,17 @@ async function confirmDeleteActivity() {
     if (tipo === "PAGO_TOTAL") return "PAGO TOTAL";
     return tipo;
   }
+
+  // Función para verificar si el usuario puede gestionar pagos
+function canManagePayments() {
+  return isAdmin;
+}
+
+// Función para iniciar proceso de anulación de pago
+function askCancelPayment(payment) {
+  setPaymentToCancel(payment);
+  setOpenCancelPayment(true);
+}
 
   return (
     <>
@@ -742,36 +761,74 @@ async function confirmDeleteActivity() {
         </div>
 
         <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
-          {payments.map((p) => (
-            <div
-              key={p.PagoId}
-              style={{
-                padding: 12,
-                borderRadius: 12,
-                border: "1px solid #e5e7eb",
-                background: "#f8fafc",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+        {payments.map((p) => (
+          <div
+            key={p.PagoId}
+            style={{
+              padding: 12,
+              borderRadius: 12,
+              border: "1px solid #e5e7eb",
+              background: Number(p.Anulado) === 1 ? "#fef2f2" : "#f8fafc",
+              opacity: Number(p.Anulado) === 1 ? 0.8 : 1,
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+              <div>
                 <b>{formatTipoPago(p.TipoPago)}</b>
+                {Number(p.Anulado) === 1 ? (
+                  <span style={{ marginLeft: 8, fontSize: 12, color: "#b91c1c", fontWeight: 700 }}>
+                    ANULADO
+                  </span>
+                ) : null}
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <span style={{ fontSize: 12, opacity: 0.75 }}>
                   {new Date(p.CreadoEn).toLocaleString()}
                 </span>
-              </div>
 
-              <div style={{ fontSize: 13, opacity: 0.9, marginTop: 4 }}>
-                Monto: <b>${Number(p.Monto || 0).toFixed(2)}</b>
-              </div>
-
-              <div style={{ fontSize: 13, opacity: 0.85, marginTop: 4 }}>
-                {p.Observacion || "Sin observación"}
-              </div>
-
-              <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
-                Registrado por: {p.UsuarioNombre}
+                {canManagePayments() && Number(p.Anulado) !== 1 ? (
+                  <button
+                    onClick={() => askCancelPayment(p)}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: 10,
+                      border: "1px solid #fecaca",
+                      background: "#fff",
+                      color: "#b91c1c",
+                      cursor: "pointer",
+                      fontSize: 12,
+                      fontWeight: 700,
+                    }}
+                    title="Anular pago"
+                  >
+                    Anular
+                  </button>
+                ) : null}
               </div>
             </div>
-          ))}
+
+            <div style={{ fontSize: 13, opacity: 0.9, marginTop: 4 }}>
+              Monto: <b>${Number(p.Monto || 0).toFixed(2)}</b>
+            </div>
+
+            <div style={{ fontSize: 13, opacity: 0.85, marginTop: 4 }}>
+              {p.Observacion || "Sin observación"}
+            </div>
+
+            <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
+              Registrado por: {p.UsuarioNombre}
+            </div>
+
+            {Number(p.Anulado) === 1 ? (
+              <div style={{ fontSize: 12, opacity: 0.8, marginTop: 6, color: "#991b1b" }}>
+                Anulado por: {p.UsuarioAnulacionNombre || "Usuario"} •{" "}
+                {p.AnuladoEn ? new Date(p.AnuladoEn).toLocaleString() : ""} <br />
+                Motivo: {p.MotivoAnulacion || "Sin motivo"}
+              </div>
+            ) : null}
+          </div>
+        ))}
 
           {payments.length === 0 ? <p>No hay pagos registrados.</p> : null}
         </div>
@@ -831,6 +888,40 @@ async function confirmDeleteActivity() {
           }
 
           showToast("Pago registrado correctamente", "success", 5000);
+        }}
+      />
+
+      <CancelPaymentModal
+        open={openCancelPayment}
+        onClose={() => {
+          if (cancelingPayment) return;
+          setOpenCancelPayment(false);
+          setPaymentToCancel(null);
+        }}
+        payment={paymentToCancel}
+        loading={cancelingPayment}
+        onConfirm={async (motivo) => {
+          try {
+            setCancelingPayment(true);
+            await cancelPayment(paymentToCancel.PagoId, motivo);
+            await load();
+
+            if (onCaseUpdated) {
+              await onCaseUpdated();
+            }
+
+            showToast("Pago anulado correctamente", "success", 5000);
+            setOpenCancelPayment(false);
+            setPaymentToCancel(null);
+          } catch (e) {
+            showToast(
+              e?.response?.data?.message || "No se pudo anular el pago",
+              "error",
+              5000
+            );
+          } finally {
+            setCancelingPayment(false);
+          }
         }}
       />
 

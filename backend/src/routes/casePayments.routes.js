@@ -4,6 +4,7 @@ const { requirePermission } = require("../middlewares/permit.middleware");
 const {
   listPaymentsController,
   addPaymentController,
+  cancelPaymentController,
 } = require("../controllers/casePayments.controller");
 
 router.get(
@@ -18,6 +19,13 @@ router.post(
   authRequired,
   requirePermission("CASES_MANAGE"),
   addPaymentController
+);
+
+router.put(
+  "/payments/:id/cancel",
+  authRequired,
+  requirePermission("CASES_MANAGE"),
+  cancelPaymentController
 );
 
 module.exports = router;

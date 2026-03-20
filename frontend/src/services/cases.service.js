@@ -114,3 +114,9 @@ export async function addPayment(caseId, payload) {
   const { data } = await api.post(`/cases/${caseId}/payments`, payload);
   return data;
 }
+
+// Cancelar un pago específico por ID con el motivo de cancelación
+export async function cancelPayment(paymentId, motivo) {
+  const { data } = await api.put(`/payments/${paymentId}/cancel`, { motivo });
+  return data;
+}
